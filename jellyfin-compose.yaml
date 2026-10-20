@@ -1,0 +1,22 @@
+# Jellyfin for the tests: docker compose -f jellyfin-compose.yaml up -d (user jellyfin / password 1234, created in the
+# setup wizard).
+services:
+  jellyfin:
+    image: jellyfin/jellyfin
+    container_name: jellyfin
+    # Hardware transcoding (VAAPI), optional: the render device and the id of the host's render group
+    # (getent group render), remove both for software transcoding
+    devices:
+      - /dev/dri/renderD128:/dev/dri/renderD128
+    group_add:
+      - "990"
+    ports:
+      - 8096:8096/tcp
+      - 7359:7359/udp
+    volumes:
+      - ~/jellyfin/config:/config
+      - ~/jellyfin/cache:/cache
+      - type: bind
+        source: ~/media
+        target: /media
+    restart: 'unless-stopped'

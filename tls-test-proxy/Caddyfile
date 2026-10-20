@@ -1,0 +1,54 @@
+{
+	auto_https off
+	admin off
+	# Android clients use HTTP/1.1 and HTTP/2, HTTP/3 (UDP) is not needed
+	servers {
+		protocols h1 h2
+		# Clients connecting by IP (e.g. 10.0.2.2 from the emulator) send no SNI, which Caddy rejects with
+		# 421 when client auth is enabled. Test proxy only, do not use in production.
+		strict_sni_host insecure_off
+	}
+}
+
+# Custom CA + required client certificate (mTLS). 8922 - 8928: the same for the parallel workers of
+# manual-test.py --jobs (one port each), the request log tells them apart by port
+https://:8920, https://:8922, https://:8923, https://:8924, https://:8925, https://:8926, https://:8927, https://:8928 {
+	tls certs/server.pem certs/server.key {
+		client_auth {
+			mode require_and_verify
+			trusted_ca_cert_file certs/client-ca.pem
+			# client-one-ca.p12: client certificate signed by the server CA (one file for CA and client certificate)
+			trusted_ca_cert_file certs/ca.pem
+		}
+	}
+	# Request log (with the client certificate CN), read by tls-test-matrix/manual-test.py
+	log {
+		output file access.log {
+			roll_disabled
+		}
+		# JSON also when Caddy runs in a terminal (the default there is the console format, which the script cannot read)
+		format json
+	}
+	reverse_proxy 127.0.0.1:8096
+}
+
+# Custom CA only, no client certificate. 8931 - 8937: the same for the parallel workers of manual-test.py --jobs
+# (one port each, the CA-only steps of the checklists)
+https://:8921, https://:8931, https://:8932, https://:8933, https://:8934, https://:8935, https://:8936, https://:8937 {
+	tls certs/server.pem certs/server.key
+	# Request log (with the client certificate CN), read by tls-test-matrix/manual-test.py
+	log {
+		output file access.log {
+			roll_disabled
+		}
+		# JSON also when Caddy runs in a terminal (the default there is the console format, which the script cannot read)
+		format json
+	}
+	reverse_proxy 127.0.0.1:8096
+}
+
+# Plain HTTP file server to import the test certificates in the app ("Import from URL")
+http://:8930 {
+	root * public
+	file_server browse
+}

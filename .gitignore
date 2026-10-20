@@ -1,0 +1,19 @@
+# WebView APKs (about 1 GB), origin documented in WEBVIEW-APKS.md
+webview-apks/
+# File manager for tv-picker.md, downloaded by setup.sh
+tv-picker/
+__pycache__/
+*.log
+*.lock
+timings.txt
+# Results (raw and the generated matrices), published separately
+results*/
+manual-results/
+# Test PKI of the proxy (private keys, .p12 files), made by tls-test-proxy/generate.sh
+tls-test-proxy/certs/
+tls-test-proxy/public/
+
+# Backups of AVD data (lock settings of TLS_API_28), not for the repository
+avd-backup/
+# Caddy release for the test proxy (setup.sh), the distribution package has no post-quantum key exchange
+tls-test-proxy/bin/
