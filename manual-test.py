@@ -576,19 +576,32 @@ def validate_networks_offline():
     (WorkManager, a network constraint) runs only on a validated network on API 28+, without one the download step waited
     180 s with no request (the emulators resolved no names on that host network). API 23 - 26 do
     not ask for validation, and there "svc wifi" from the shell dies with a SecurityException (CHANGE_WIFI_STATE) that
-    the logcat check takes for a system crash (TLS_API_24): skipped there. Wifi and mobile data are
-    switched off and on to evaluate them again."""
+    the logcat check takes for a system crash (TLS_API_24): skipped there.
+    The setting stays on the device, the networks of later boots are validated without probes. Only without a validated
+    network after that (first boot with the setting, no internet) mobile data is switched off and on to evaluate it again:
+    Android prefers the validated network as the default. Not wifi: on API 30 the wifi network that came back had no
+    routes ("Machine is not on the network"), the first request of the app after the reboot step hung 30 s and the
+    download never started."""
     if int(shell("getprop ro.build.version.sdk") or 99) < 28:
         return
     shell("settings put global captive_portal_mode 0")
-    shell("svc wifi disable; svc data disable; sleep 1; svc wifi enable; svc data enable")
-    deadline = time.time() + 30
+    if wait_validated(10):
+        log("network validated")
+        return
+    shell("svc data disable; sleep 1; svc data enable")
+    if wait_validated(30):
+        log("network validated (internet probes off, mobile data switched off and on)")
+    else:
+        log("no validated network after 30 s, downloads may not start")
+
+
+def wait_validated(seconds):
+    deadline = time.time() + seconds
     while time.time() < deadline:
         if "VALIDATED" in shell("dumpsys connectivity | grep -m5 'NetworkAgentInfo'"):
-            log("network validated (internet probes off)")
-            return
+            return True
         time.sleep(2)
-    log("no validated network after 30 s, downloads may not start")
+    return False
 
 
 def install(apk, app_id, fresh):
