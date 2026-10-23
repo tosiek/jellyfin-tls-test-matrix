@@ -45,16 +45,20 @@ cat manual-results/$(ls -t manual-results | head -1)/SUMMARY.md   # step × AVD
 - `manual-test.py` builds the app first. `--skip-build` reuses the last APK: check which branch it was built from.
 - Branches (both apps, local): `feature/custom-ca-mtls-minimal` holds only the mTLS work (the upstream PR), each
   unrelated fix has its own `fix/*` branch from `origin/master` (mobile: `fix/player-service-notification-extra`,
-  `fix/pip-feature-check`, `fix/show-fragment-when-started`, `fix/download-request-failure`).
+  `fix/pip-feature-check`, `fix/show-fragment-when-started`, `fix/download-request-failure`,
+  `fix/connection-error-details`; TV: `fix/connection-error-details`).
   `test/custom-ca-mtls-all` is minimal plus every fix commit at the end, the tests run on it. After a change to
-  minimal or a fix branch, rebuild it:
+  minimal or a fix branch, rebuild it. `fix/connection-error-details` conflicts with minimal where both add a line
+  under an address or to an error text (mobile `ConnectionHelper.kt`, TV `ServerFragment.kt` and the two
+  `UserLogin*Fragment.kt`): keep the TLS text first, the mapped cause only without one, the raw cause in both.
 
   ```bash
   git -C ../jellyfin-android switch -C test/custom-ca-mtls-all feature/custom-ca-mtls-minimal
-  for b in fix/player-service-notification-extra fix/pip-feature-check fix/show-fragment-when-started fix/download-request-failure; do
+  for b in fix/player-service-notification-extra fix/pip-feature-check fix/show-fragment-when-started fix/download-request-failure fix/connection-error-details; do
     git -C ../jellyfin-android cherry-pick origin/master..$b
   done
-  git -C ../jellyfin-androidtv switch -C test/custom-ca-mtls-all feature/custom-ca-mtls-minimal   # TV has no fix branches
+  git -C ../jellyfin-androidtv switch -C test/custom-ca-mtls-all feature/custom-ca-mtls-minimal
+  git -C ../jellyfin-androidtv cherry-pick origin/master..fix/connection-error-details
   ```
 
 - `--jobs N` (needs `--auto`): N emulators at a time, each with its own emulator port (5590, 5592, …), Appium
