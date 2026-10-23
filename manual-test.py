@@ -562,6 +562,7 @@ def wait_for_boot(timeout=300):
     # No "… has stopped" dialogs: one of Google Play Movies after a reboot covered the app for 9 steps (TLS_API_26).
     # Crashes stay in logcat, where the steps look for them.
     shell("settings put global hide_error_dialogs 1")
+    validate_networks_offline()
     time.sleep(3)  # the tip of the launcher comes a moment after the home screen
     try:
         dismiss_got_it()
@@ -569,6 +570,26 @@ def wait_for_boot(timeout=300):
         log("no uiautomator dump for the first-run tips, skipped")
     set_volume()
     log(f"booted, API {shell('getprop ro.build.version.sdk')}")
+
+def validate_networks_offline():
+    """No internet probes: the networks of the emulator count as validated without DNS or internet. The download worker
+    (WorkManager, a network constraint) runs only on a validated network on API 28+, without one the download step waited
+    180 s with no request (the emulators resolved no names on that host network). API 23 - 26 do
+    not ask for validation, and there "svc wifi" from the shell dies with a SecurityException (CHANGE_WIFI_STATE) that
+    the logcat check takes for a system crash (TLS_API_24): skipped there. Wifi and mobile data are
+    switched off and on to evaluate them again."""
+    if int(shell("getprop ro.build.version.sdk") or 99) < 28:
+        return
+    shell("settings put global captive_portal_mode 0")
+    shell("svc wifi disable; svc data disable; sleep 1; svc wifi enable; svc data enable")
+    deadline = time.time() + 30
+    while time.time() < deadline:
+        if "VALIDATED" in shell("dumpsys connectivity | grep -m5 'NetworkAgentInfo'"):
+            log("network validated (internet probes off)")
+            return
+        time.sleep(2)
+    log("no validated network after 30 s, downloads may not start")
+
 
 def install(apk, app_id, fresh):
     if fresh:

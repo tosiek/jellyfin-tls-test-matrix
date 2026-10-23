@@ -1034,7 +1034,10 @@ def flow_download(d, card="0"):
             d.log(f"downloaded: {name} ({expected} bytes)")
             return
         time.sleep(2)
-    raise FlowFailed(f"download not complete after 180s, {expected} bytes expected, files: {sizes or 'none'}")
+    # The download worker waits for a validated network (API 28+): without one no request reaches the proxy
+    validated = "VALIDATED" in d.shell("dumpsys connectivity | grep -m5 'NetworkAgentInfo'")
+    raise FlowFailed(f"download not complete after 180s, {expected} bytes expected, files: {sizes or 'none'}"
+                     + ("" if validated else ", no validated network (the download worker waits for one)"))
 
 
 # --- Certificates screen and error messages ----------------------------------------------------------------------------
