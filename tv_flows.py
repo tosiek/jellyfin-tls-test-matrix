@@ -38,6 +38,12 @@ CHOOSE = dict(
     ca="@text='Choose…' and preceding::*[@text='CA certificate'] and not(preceding::*[@text='Client certificate'])",
     client="@text='Choose…' and preceding::*[@text='Client certificate']",
 )
+# The client row is to the right of the CA row: down to the bottom, the CA row or the system store button below both
+# rows (its up leads to the CA row), then right past the CA row's "Choose…" and "Remove"
+CHOOSE_KEYS = dict(
+    ca=SWEEP,
+    client=("DPAD_DOWN",) * 12 + ("DPAD_RIGHT",) * 3 + ("DPAD_UP",) + ("DPAD_RIGHT",) * 3 + ("DPAD_UP",) * 24,
+)
 # Text field of an AlertDialog (URL, password)
 DIALOG_FIELD = "//*[@resource-id='android:id/custom']//android.widget.EditText"
 DIALOG_MESSAGE = "//*[@resource-id='android:id/message']"
@@ -161,7 +167,7 @@ def stage_from_url(d, kind, name, password="jellyfin"):
     """Server add screen with Advanced open: "Choose…" of the CA (kind ca) or client certificate row, the URL of the
     proxy's file server, the password for a .p12. The row then says "<name> (new)"."""
     row = "CA certificate" if kind == "ca" else "Client certificate"
-    select(d, CHOOSE[kind], what=f'"Choose…" of "{row}"')
+    select(d, CHOOSE[kind], CHOOSE_KEYS[kind], what=f'"Choose…" of "{row}"')
     type_into(d, DIALOG_FIELD, f"{IMPORT_URL}/{name}", "URL field")
     confirm_dialog(d)
     finish_staging(d, kind, name, password, IMPORT_URL)
@@ -192,7 +198,7 @@ def stage_from_file(d, kind, name, password="jellyfin"):
     """As stage_from_url on a device with a document picker (tv-phone.md): "Choose…" opens the system file picker,
     Download/jellyfin-tls/proxy/<name> is picked by touch (the picker is not part of the app)."""
     row = "CA certificate" if kind == "ca" else "Client certificate"
-    select(d, CHOOSE[kind], what=f'"Choose…" of "{row}"')
+    select(d, CHOOSE[kind], CHOOSE_KEYS[kind], what=f'"Choose…" of "{row}"')
     pick_file(d, name)
     finish_staging(d, kind, name, password, "the file picker")
 
